@@ -1,0 +1,115 @@
+//Set up a MongoDB database to store the server objects.
+
+@Configuration
+public class MongoConfig {
+
+  @Value("${spring.data.mongodb.uri}")
+  private String mongoUri;
+
+  @Bean
+  public MongoTemplate mongoTemplate() throws Exception {
+    MongoClientURI uri = new MongoClientURI(mongoUri);
+    MongoClient mongoClient = new MongoClient(uri);
+    MongoTemplate mongoTemplate = new MongoTemplate(mongoClient, "servers");
+    return mongoTemplate;
+  }
+}
+
+//Create a Java project and add the required dependencies.
+
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-data-mongodb</artifactId>
+</dependency>
+
+//Define a Server model class to represent the server objects.
+
+@Document(collection = "servers")
+public class Server {
+  @Id
+  private String id;
+  private String name;
+  private String language;
+  private String framework;
+
+  // constructors, getters and setters
+}
+
+//Define a ServerService class to handle CRUD operations on the server objects.
+
+@Service
+public class ServerService {
+  @Autowired
+  private MongoTemplate mongoTemplate;
+
+  public List<Server> findAll() {
+    return mongoTemplate.findAll(Server.class);
+  }
+
+  public Server findById(String id) {
+    return mongoTemplate.findById(id, Server.class);
+  }
+
+  public Server save(Server server) {
+    return mongoTemplate.save(server);
+  }
+
+  public void deleteById(String id) {
+    mongoTemplate.remove(new Query(Criteria.where("id").is(id)), Server.class);
+  }
+
+  public List<Server> findByName(String name) {
+    return mongoTemplate.find(new Query(Criteria.where("name").regex(name, "i")), Server.class);
+  }
+}
+
+//Define a ServerController class to map HTTP requests to corresponding service methods.
+
+@RestController
+@RequestMapping("/servers")
+public class ServerController {
+  @Autowired
+  private ServerService serverService;
+
+  @GetMapping
+  public List<Server> findAll() {
+    return serverService.findAll();
+  }
+
+  @GetMapping("/{id}")
+  public Server findById(@PathVariable String id) {
+    Server server = serverService.findById(id);
+    if (server == null) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Server not found");
+    }
+    return server;
+  }
+
+  @PostMapping
+  public Server create(@RequestBody Server server) {
+    return serverService.save(server);
+  }
+
+  @PutMapping("/{id}")
+  public Server update(@PathVariable String id, @RequestBody Server server) {
+    Server existingServer = serverService.findById(id);
+    if (existingServer == null) {
+      throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Server not found");
+    }
+    server.setId(id);
+    return serverService.save(server);
+  }
+
+  @DeleteMapping("/{id}")
+  public void deleteById(@PathVariable String id) {
+    serverService.deleteById(id);
+  }
+
+  @GetMapping("/search")
+  public List
+
+
